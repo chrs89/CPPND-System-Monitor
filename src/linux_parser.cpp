@@ -3,6 +3,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 #include "linux_parser.h"
 
@@ -10,6 +12,7 @@ using std::stof;
 using std::string;
 using std::to_string;
 using std::vector;
+using std::cout;
 
 // DONE: An example of how to read data from the filesystem
 string LinuxParser::OperatingSystem() {
@@ -68,13 +71,83 @@ vector<int> LinuxParser::Pids() {
 }
 
 // TODO: Read and return the system memory utilization
-float LinuxParser::MemoryUtilization() { return 0.0; }
+float LinuxParser::MemoryUtilization() { 
+  cout << "Trying to open: " << kProcDirectory + kMeminfoFilename << "\n"; 
+  
+  std::ifstream file(kProcDirectory + kMeminfoFilename);
+  std::string line;
+  std::regex memTotal_regex("^MemTotal:\\s+(\\d+)");
+  std::regex memFree_regex("^MemFree:\\s+(\\d+)");
+  std::smatch match;
+  bool b_memTotal = false, b_memFree = false;
+
+  float memTotal = 0.0f, memFree = 0.0f;
+
+  if (file.is_open()){
+    while(std::getline(file,line)){
+      if (std::regex_search(line,match,memTotal_regex))
+      {
+        memTotal = std::stof(match[1]);
+        b_memTotal = true;
+
+      }
+      if (std::regex_search(line,match,memFree_regex))
+      {
+        memFree = std::stof(match[1]);
+        b_memFree = true;
+      }
+
+      if (b_memTotal && b_memFree){break;}
+    }
+  }
+
+  cout << std::fixed <<std::setprecision(2);
+  cout << "MemTotal: " << memTotal << "\n";
+  cout << "MemFree: " << memFree << "\n";
+
+  return (memTotal - memFree)/memTotal;
+}
 
 // TODO: Read and return the system uptime
-long LinuxParser::UpTime() { return 0; }
+long LinuxParser::UpTime() {
+  std::ifstream file(kProcDirectory + kUptimeFilename); 
+
+  std::string line;
+  long uptime = 0;
+
+  if (file.is_open()){
+    std::getline(file,line);
+    std::istringstream linestream(line);
+    linestream >> uptime;
+  }
+  return uptime;
+}
 
 // TODO: Read and return the number of jiffies for the system
-long LinuxParser::Jiffies() { return 0; }
+long LinuxParser::Jiffies() {
+  std::ifstream file(kProcDirectory + kStatFilename);
+  std::string line, cpu;
+
+  long value = 0;
+  long total = 0;
+
+  if(file.is_open())
+  {
+
+    std::getline(file,line);
+    std::istringstream linestream(line);
+
+    linestream >> cpu;
+
+    while (linestream >> value){
+      total += value;
+    }
+    
+  }
+  
+  
+  return total;
+}
 
 // TODO: Read and return the number of active jiffies for a PID
 // REMOVE: [[maybe_unused]] once you define the function
